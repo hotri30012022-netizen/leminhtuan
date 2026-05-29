@@ -1,242 +1,40 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>WebAR Mô Hình Chim (GPS) - AR.js</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-look-at-component.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  </head>
+  <body style="margin: 0px; overflow: hidden;">
+    
+    <a-scene embedded 
+             vr-mode-ui="enabled: false" 
+             arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
+      
+      <a-assets>
+        <a-asset-item id="bird-obj" src="./assets/10012_crab_v2_iterations-1.obj"></a-asset-item>
+        <a-asset-item id="bird-mtl" src="./assets/10012_crab_v2_iterations-1.mtl"></a-asset-item>
+      </a-assets>
+      
+      <a-entity 
+        gps-entity-place="latitude: 10.421500; longitude: 105.643072;"
+        look-at="[gps-camera]">
+        
+        <a-obj-model 
+          src="#bird-obj" 
+          mtl="#bird-mtl" 
+          position="0 0 0" 
+          scale="0.05 0.05 0.05" 
+          rotation="0 0 0">
+        </a-obj-model>
 
-  <meta
-    name="viewport"
-    content="width=device-width,
-    initial-scale=1.0,
-    maximum-scale=1.0,
-    user-scalable=no"
-  >
-
-  <title>GPS WebAR - AR.js</title>
-
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-
-  <!-- AR.js -->
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-    }
-
-    #info {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 999;
-      background: rgba(0,0,0,0.75);
-      color: white;
-      padding: 12px;
-      border-radius: 10px;
-      min-width: 250px;
-      line-height: 1.5;
-    }
-  </style>
-</head>
-
-<body>
-
-<div id="info">
-  Đang khởi tạo GPS...
-</div>
-
-<a-scene
-  embedded
-  vr-mode-ui="enabled: false"
-  renderer="logarithmicDepthBuffer: true;"
-  arjs="
-    sourceType: webcam;
-    videoTexture: true;
-    debugUIEnabled: false;
-  "
->
-
-  <!-- Tài nguyên -->
-  <a-assets>
-
-    <a-asset-item
-      id="bird-obj"
-      src="./assets/10012_crab_v2_iterations-1.obj">
-    </a-asset-item>
-
-    <a-asset-item
-      id="bird-mtl"
-      src="./assets/10012_crab_v2_iterations-1.mtl">
-    </a-asset-item>
-
-  </a-assets>
-
-  <!-- Camera GPS -->
-  <a-camera
-    gps-new-camera="gpsMinDistance: 5"
-    rotation-reader>
-  </a-camera>
-
-  <!-- Mô hình AR -->
-  <a-entity
-    id="bird-place"
-    visible="false"
-    gps-new-entity-place="
-      latitude: 10.421500;
-      longitude: 105.643072;
-    "
-  >
-
-    <a-obj-model
-      src="#bird-obj"
-      mtl="#bird-mtl"
-      position="0 0 0"
-      scale="0.5 0.5 0.5"
-      rotation="-90 0 0">
-    </a-obj-model>
-
-  </a-entity>
-
-</a-scene>
-
-<script>
-
-  // =========================
-  // CẤU HÌNH
-  // =========================
-
-  const TARGET_LAT = 10.421500;
-  const TARGET_LON = 105.643072;
-
-  // Cho phép kích hoạt trong bán kính 100m
-  const MAX_DISTANCE = 100;
-
-  const info = document.getElementById("info");
-  const birdPlace = document.getElementById("bird-place");
-
-
-  // =========================
-  // TÍNH KHOẢNG CÁCH GPS
-  // =========================
-
-  function calculateDistance(lat1, lon1, lat2, lon2) {
-
-    const R = 6371000;
-
-    const dLat =
-      (lat2 - lat1) * Math.PI / 180;
-
-    const dLon =
-      (lon2 - lon1) * Math.PI / 180;
-
-    const a =
-      Math.sin(dLat / 2) *
-      Math.sin(dLat / 2) +
-
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-    const c =
-      2 * Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1 - a)
-      );
-
-    return R * c;
-  }
-
-
-  // =========================
-  // GPS WATCH
-  // =========================
-
-  if ("geolocation" in navigator) {
-
-    navigator.geolocation.watchPosition(
-
-      (position) => {
-
-        const userLat =
-          position.coords.latitude;
-
-        const userLon =
-          position.coords.longitude;
-
-        const accuracy =
-          position.coords.accuracy;
-
-        const distance =
-          calculateDistance(
-            userLat,
-            userLon,
-            TARGET_LAT,
-            TARGET_LON
-          );
-
-        // Nếu trong bán kính cho phép
-        if (distance <= MAX_DISTANCE) {
-
-          birdPlace.setAttribute(
-            "visible",
-            true
-          );
-
-          info.innerHTML = `
-            ✅ AR đã kích hoạt<br>
-            Khoảng cách:
-            ${distance.toFixed(1)} m<br>
-
-            Sai số GPS:
-            ${accuracy.toFixed(1)} m
-          `;
-
-        } else {
-
-          birdPlace.setAttribute(
-            "visible",
-            false
-          );
-
-          info.innerHTML = `
-            📍 Chưa đến vị trí AR<br>
-
-            Khoảng cách:
-            ${distance.toFixed(1)} m<br>
-
-            Cần ≤ ${MAX_DISTANCE} m
-          `;
-        }
-
-      },
-
-      (error) => {
-
-        info.innerHTML =
-          "❌ Không truy cập được GPS";
-
-        console.error(error);
-      },
-
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 30000
-      }
-
-    );
-
-  } else {
-
-    info.innerHTML =
-      "❌ Thiết bị không hỗ trợ GPS";
-  }
-
-</script>
-
-</body>
+      </a-entity>
+      
+      <a-entity camera gps-camera="gpsMinDistance: 100;" rotation-reader></a-entity>
+      
+    </a-scene>
+  </body>
 </html>
