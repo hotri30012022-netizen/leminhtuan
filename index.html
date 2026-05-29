@@ -1,19 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
 
-  <title>GPS AR.js - 100m Radius</title>
+  <meta
+    name="viewport"
+    content="width=device-width,
+    initial-scale=1.0,
+    maximum-scale=1.0,
+    user-scalable=no"
+  >
 
+  <title>GPS WebAR - AR.js</title>
+
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+
+  <!-- AR.js -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      font-family: Arial;
+      font-family: Arial, sans-serif;
     }
 
     #info {
@@ -21,11 +31,12 @@
       top: 10px;
       left: 10px;
       z-index: 999;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75);
       color: white;
-      padding: 10px;
+      padding: 12px;
       border-radius: 10px;
-      min-width: 220px;
+      min-width: 250px;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -33,7 +44,7 @@
 <body>
 
 <div id="info">
-  Đang tìm GPS...
+  Đang khởi tạo GPS...
 </div>
 
 <a-scene
@@ -47,7 +58,9 @@
   "
 >
 
+  <!-- Tài nguyên -->
   <a-assets>
+
     <a-asset-item
       id="bird-obj"
       src="./assets/10012_crab_v2_iterations-1.obj">
@@ -57,6 +70,7 @@
       id="bird-mtl"
       src="./assets/10012_crab_v2_iterations-1.mtl">
     </a-asset-item>
+
   </a-assets>
 
   <!-- Camera GPS -->
@@ -65,7 +79,7 @@
     rotation-reader>
   </a-camera>
 
-  <!-- Object GPS -->
+  <!-- Mô hình AR -->
   <a-entity
     id="bird-place"
     visible="false"
@@ -78,6 +92,7 @@
     <a-obj-model
       src="#bird-obj"
       mtl="#bird-mtl"
+      position="0 0 0"
       scale="0.5 0.5 0.5"
       rotation="-90 0 0">
     </a-obj-model>
@@ -88,91 +103,138 @@
 
 <script>
 
-const TARGET_LAT = 10.421500;
-const TARGET_LON = 105.643072;
+  // =========================
+  // CẤU HÌNH
+  // =========================
 
-const MAX_DISTANCE = 100; // mét
+  const TARGET_LAT = 10.421500;
+  const TARGET_LON = 105.643072;
 
-const info = document.getElementById("info");
-const bird = document.getElementById("bird-place");
+  // Cho phép kích hoạt trong bán kính 100m
+  const MAX_DISTANCE = 100;
 
-
-// Tính khoảng cách GPS bằng Haversine
-function calculateDistance(lat1, lon1, lat2, lon2) {
-
-  const R = 6371000;
-
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
+  const info = document.getElementById("info");
+  const birdPlace = document.getElementById("bird-place");
 
 
-// Theo dõi GPS
-navigator.geolocation.watchPosition(
+  // =========================
+  // TÍNH KHOẢNG CÁCH GPS
+  // =========================
 
-  (position) => {
+  function calculateDistance(lat1, lon1, lat2, lon2) {
 
-    const userLat = position.coords.latitude;
-    const userLon = position.coords.longitude;
+    const R = 6371000;
 
-    const accuracy = position.coords.accuracy;
+    const dLat =
+      (lat2 - lat1) * Math.PI / 180;
 
-    const distance = calculateDistance(
-      userLat,
-      userLon,
-      TARGET_LAT,
-      TARGET_LON
-    );
+    const dLon =
+      (lon2 - lon1) * Math.PI / 180;
 
-    // Nếu trong bán kính 100m
-    if (distance <= MAX_DISTANCE) {
+    const a =
+      Math.sin(dLat / 2) *
+      Math.sin(dLat / 2) +
 
-      bird.setAttribute("visible", true);
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
 
-      info.innerHTML = `
-        ✅ Đã kích hoạt AR<br>
-        Khoảng cách: ${distance.toFixed(1)} m<br>
-        Sai số GPS: ${accuracy.toFixed(1)} m
-      `;
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
 
-    } else {
+    const c =
+      2 * Math.atan2(
+        Math.sqrt(a),
+        Math.sqrt(1 - a)
+      );
 
-      bird.setAttribute("visible", false);
-
-      info.innerHTML = `
-        📍 Hãy tiến gần mục tiêu hơn<br>
-        Khoảng cách: ${distance.toFixed(1)} m<br>
-        Cần <= ${MAX_DISTANCE} m
-      `;
-    }
-
-  },
-
-  (error) => {
-
-    info.innerHTML = "Không truy cập được GPS";
-
-    console.error(error);
-  },
-
-  {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 27000
+    return R * c;
   }
 
-);
+
+  // =========================
+  // GPS WATCH
+  // =========================
+
+  if ("geolocation" in navigator) {
+
+    navigator.geolocation.watchPosition(
+
+      (position) => {
+
+        const userLat =
+          position.coords.latitude;
+
+        const userLon =
+          position.coords.longitude;
+
+        const accuracy =
+          position.coords.accuracy;
+
+        const distance =
+          calculateDistance(
+            userLat,
+            userLon,
+            TARGET_LAT,
+            TARGET_LON
+          );
+
+        // Nếu trong bán kính cho phép
+        if (distance <= MAX_DISTANCE) {
+
+          birdPlace.setAttribute(
+            "visible",
+            true
+          );
+
+          info.innerHTML = `
+            ✅ AR đã kích hoạt<br>
+            Khoảng cách:
+            ${distance.toFixed(1)} m<br>
+
+            Sai số GPS:
+            ${accuracy.toFixed(1)} m
+          `;
+
+        } else {
+
+          birdPlace.setAttribute(
+            "visible",
+            false
+          );
+
+          info.innerHTML = `
+            📍 Chưa đến vị trí AR<br>
+
+            Khoảng cách:
+            ${distance.toFixed(1)} m<br>
+
+            Cần ≤ ${MAX_DISTANCE} m
+          `;
+        }
+
+      },
+
+      (error) => {
+
+        info.innerHTML =
+          "❌ Không truy cập được GPS";
+
+        console.error(error);
+      },
+
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 30000
+      }
+
+    );
+
+  } else {
+
+    info.innerHTML =
+      "❌ Thiết bị không hỗ trợ GPS";
+  }
 
 </script>
 
