@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>GPS AR.js</title>
+  <title>GPS AR.js - 100m Radius</title>
 
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -13,6 +13,7 @@
     body {
       margin: 0;
       overflow: hidden;
+      font-family: Arial;
     }
 
     #info {
@@ -24,14 +25,16 @@
       color: white;
       padding: 10px;
       border-radius: 10px;
-      font-family: Arial;
+      min-width: 220px;
     }
   </style>
 </head>
 
 <body>
 
-<div id="info">Đang tìm GPS...</div>
+<div id="info">
+  Đang tìm GPS...
+</div>
 
 <a-scene
   embedded
@@ -64,6 +67,8 @@
 
   <!-- Object GPS -->
   <a-entity
+    id="bird-place"
+    visible="false"
     gps-new-entity-place="
       latitude: 10.421500;
       longitude: 105.643072;
@@ -82,32 +87,93 @@
 </a-scene>
 
 <script>
-  const info = document.getElementById("info");
 
-  navigator.geolocation.watchPosition(
+const TARGET_LAT = 10.421500;
+const TARGET_LON = 105.643072;
 
-    (position) => {
+const MAX_DISTANCE = 100; // mét
+
+const info = document.getElementById("info");
+const bird = document.getElementById("bird-place");
+
+
+// Tính khoảng cách GPS bằng Haversine
+function calculateDistance(lat1, lon1, lat2, lon2) {
+
+  const R = 6371000;
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+
+// Theo dõi GPS
+navigator.geolocation.watchPosition(
+
+  (position) => {
+
+    const userLat = position.coords.latitude;
+    const userLon = position.coords.longitude;
+
+    const accuracy = position.coords.accuracy;
+
+    const distance = calculateDistance(
+      userLat,
+      userLon,
+      TARGET_LAT,
+      TARGET_LON
+    );
+
+    // Nếu trong bán kính 100m
+    if (distance <= MAX_DISTANCE) {
+
+      bird.setAttribute("visible", true);
 
       info.innerHTML = `
-        Lat: ${position.coords.latitude.toFixed(6)}<br>
-        Lon: ${position.coords.longitude.toFixed(6)}<br>
-        Accuracy: ${position.coords.accuracy.toFixed(1)} m
+        ✅ Đã kích hoạt AR<br>
+        Khoảng cách: ${distance.toFixed(1)} m<br>
+        Sai số GPS: ${accuracy.toFixed(1)} m
       `;
 
-    },
+    } else {
 
-    (err) => {
-      info.innerHTML = "Không truy cập được GPS";
-      console.error(err);
-    },
+      bird.setAttribute("visible", false);
 
-    {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 27000
+      info.innerHTML = `
+        📍 Hãy tiến gần mục tiêu hơn<br>
+        Khoảng cách: ${distance.toFixed(1)} m<br>
+        Cần <= ${MAX_DISTANCE} m
+      `;
     }
 
-  );
+  },
+
+  (error) => {
+
+    info.innerHTML = "Không truy cập được GPS";
+
+    console.error(error);
+  },
+
+  {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 27000
+  }
+
+);
+
 </script>
 
 </body>
